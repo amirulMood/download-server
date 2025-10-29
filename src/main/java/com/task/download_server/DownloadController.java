@@ -21,12 +21,18 @@ public class DownloadController {
             // Allows for the download from the requestParam
             HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
+            // Get the file name
+            String fileName = response.headers()
+                    .firstValue("Content-Disposition")
+                    .map(h -> h.replace("attachment; filename=", "").replace("\"", ""))
+                    .orElse("downloaded_file.txt");
+
             // If folder dont exist make a new one
             Path outDir = Path.of("HOME");
             Files.createDirectories(outDir);
 
             // Name the file
-            Path outFile = outDir.resolve("file_to_download.txt");
+            Path outFile = outDir.resolve(fileName);
 
             // Save/Replace file
             try (InputStream is = response.body()) {
