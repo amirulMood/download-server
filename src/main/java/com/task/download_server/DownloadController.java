@@ -6,36 +6,34 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.http.*;
 import java.nio.file.*;
-import java.time.Duration;
-import java.util.UUID;
 
 @RestController
 public class DownloadController {
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    @GetMapping("/trigger-download")
+    @GetMapping("/download-file")
     public ResponseEntity<String> triggerDownload(@RequestParam String clientUrl) {
         try {
             URI uri = new URI(clientUrl);
             HttpRequest request = HttpRequest.newBuilder().uri(uri).GET().build();
 
-            Path outDir = Path.of("downloads");
-            Files.createDirectories(outDir);
-            Path outFile = outDir.resolve("file-" + UUID.randomUUID() + ".bin");
-
+            // Allows for the download from the requestParam
             HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
-            if (response.statusCode() != 200)
-                return ResponseEntity.status(response.statusCode()).body("Failed: " + response.statusCode());
+            // If folder dont exist make a new one
+            Path outDir = Path.of("HOME");
+            Files.createDirectories(outDir);
 
+            // Name the file
+            Path outFile = outDir.resolve("file_to_download.txt");
+
+            // Save/Replace file
             try (InputStream is = response.body()) {
-                Files.copy(is, outFile);
+                Files.copy(is, outFile, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            return ResponseEntity.ok("Downloaded from " + clientUrl + " → " + outFile.toAbsolutePath());
+            return ResponseEntity.ok(outFile.toString().replace("\\", "/"));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
